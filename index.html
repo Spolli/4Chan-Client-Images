@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>ShoppingList</title>
+    <link rel="stylesheet" href="./node_modules/materialize-css/dist/css/materialize.min.css">
+    <script src="./node_modules/materialize-css/dist/js/materialize.min.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!--script src="./node_modules/jquery/dist/jquery.min.js"></script-->
+    <script>
+        var $ = require('jquery');
+        var {
+            ipcRenderer
+        } = require('electron');
+    </script>
+</head>
+
+<body>
+    <div class="container">
+        <div class="row">
+            <nav>
+                <div class="nav-wrapper">
+                    <a href="#" class="brand-logo right">Logo</a>
+                    <ul id="nav-mobile" class="left hide-on-med-and-down">
+                        <li>
+                            <a href="index.html">Home</a>
+                        </li>
+                        <li>
+                            <a href="">Search</a>
+                        </li>
+                        <li>
+                            <a href="">About me</a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+        </div>
+    </div>
+
+
+    <div class="container">
+        <div class="row">
+            <div class="col s12" id="testa"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row">
+            <div class="col s12">
+                <ul class="collection" id="lista"></ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row">
+            <div class="col s12" id="gallery">
+
+            </div>
+        </div>
+    </div>
+
+    <div id="fullsize"></div>
+
+    <script>
+        function isMedia(rec, board) {
+            if (rec.hasOwnProperty('ext') && rec.hasOwnProperty('tim')) {
+                return "https://i.4cdn.org/" + board + "/" + rec["tim"] + rec['ext'];
+            } else {
+                return null;
+            }
+        }
+
+        function downloadImage(a) {
+            ipcRenderer.send('dl-single-image', a.name);
+        }
+
+        function downloadAllImage(a) {
+            var links = [];
+            var images = $('#gallery').find('img');
+
+            for (let i = 0; i < images.length; i++) {
+                links.push(images[i]['currentSrc']);
+            }
+            ipcRenderer.send('dl-all-images', links);
+
+            ipcRenderer.on('finish-dl-all', (event, arg) => {
+                if(arg)
+                    console.log("Finish");
+                else
+                    console.log("Error");
+                    
+            });
+        }
+
+        function initNavBar(res) {
+            var nav = $('#lista');
+            var text = '';
+            res['boards'].forEach(function (par) {
+                text += "<li class='collection-item'><div>" + par['title'] +
+                    '<a href="#!" onclick="openThread(this);" class="secondary-content" name="' + par['board'] +
+                    '"><i class="material-icons">send</i></a></div></li>';
+            });
+            nav.html(text);
+        }
+
+        function loadThread(res, board) {
+            var nav = $('#lista');
+
+            var text = '';
+
+            res.forEach(function (sub) {
+                sub["threads"].forEach(function (par) {
+                    var info = {
+                        no: par["no"],
+                        board: board
+                    };
+                    text += '<li class="collection-item avatar"><img src="' + 'https://i.4cdn.org/' +
+                        board + '/' +
+                        par["tim"] + par["ext"] + '" alt="' + par["no"] +
+                        '" class="circle"><span class="title">' + par["com"] +
+                        '</span><p>Replies:&nbsp;' +
+                        par["replies"] +
+                        '<br>Images:&nbsp;' + par["images"] +
+                        '</p><a href="#!" onclick="openSubThread(this);" class="secondary-content thumbnail" name=\'' +
+                        JSON.stringify(
+                            info) + '\'><i class="material-icons">send</i></a></li>';
+                });
+            });
+            nav.html(text);
+            //hoverImg();
+        }
+
+
+
+        function loadSubThread(res, board) {
+            $('#lista').html('');
+            var gallery = $('#gallery');
+
+            var text = '';
+            var text2 = '';
+
+            res['posts'].forEach(function (par) {
+                var link = isMedia(par, board);
+                if (link === null) {
+                    return;
+                } else {
+                    text += '<div class="card">';
+                    if (par['ext'] === '.webm') {
+                        text += '<div class="video-container"><iframe width="853" height="480" src="' + link +
+                            '" frameborder="0" allowfullscreen></iframe>';
+                    } else {
+                        text += '<div class="card-image"><img src="' + link + '">';
+                    }
+                    text += '<span class="card-title">' + par['name'] +
+                        '</span><a class="btn-floating halfway-fab waves-effect waves-light red" onclick="downloadImage(this);" name="' +
+                        link +
+                        '"><i class="material-icons">file_download</i></a></div><div class="card-content"><p>' +
+                        par['com'] + "</p></div></div>";
+                }
+            });
+            gallery.html(text);
+            text2 += '<h4>Welcome to /' + board +
+                '/</h4><a class="btn-floating halfway-fab waves-effect waves-light red" onclick="downloadAllImage(this);"><i class="material-icons">file_download</i></a>';
+            $('#testa').html(text2);
+        }
+
+        function openSubThread(a) {
+            var temp = JSON.parse(a.name);
+            var url = "https://a.4cdn.org/" + temp.board + "/thread/" + temp.no + ".json";
+
+            ipcRenderer.send('send-sub-thread-json', url);
+            ipcRenderer.once('get-sub-thread-json', (event, arg) => {
+                loadSubThread(JSON.parse(arg), temp.board);
+            });
+        }
+
+        $(document).ready(function () {
+            ipcRenderer.send('send-catalog-json', 'https://a.4cdn.org/boards.json');
+            ipcRenderer.once('get-catalog-json', (event, arg) => {
+                initNavBar(JSON.parse(arg));
+            });
+        })
+
+        function hoverImg() {
+            var $tooltip = $('#fullsize');
+
+            $('img').on('mouseenter', function () {
+                var img = this,
+                    $img = $(img),
+                    offset = $img.offset();
+
+                $tooltip
+                    .css({
+                        'top': offset.top,
+                        'left': offset.left
+                    })
+                    .append($img.clone())
+                    .removeClass('hidden');
+            });
+
+            $tooltip.on('mouseleave', function () {
+                $tooltip.empty().addClass('hidden');
+            });
+        }
+
+        function openThread(a) {
+            var url = "https://a.4cdn.org/" + a.name + "/catalog.json";
+
+            ipcRenderer.send('send-thread-json', url);
+            ipcRenderer.once('get-thread-json', (event, arg) => {
+                loadThread(JSON.parse(arg), a.name);
+            });
+        }
+    </script>
+</body>
+
+</html>

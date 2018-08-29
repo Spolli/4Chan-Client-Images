@@ -1,0 +1,31 @@
+{
+  "name": "4chan-client",
+  "version": "1.0.0",
+  "description": "A 4chan client powered by Electron and NodeJS",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "package": "asar pack 4Chan-client-linux-x64/resources/app 4Chan-client-linux-x64/resources/app.asar",
+    "build": "electron-packager . 4Chan-client"
+  },
+  "keywords": [
+    "nodejs",
+    "electron",
+    "4chan"
+  ],
+  "author": "Spolli",
+  "license": "ISC",
+  "devDependencies": {
+    "electron-packager": "^12.1.0",
+    "electron-prebuilt": "^1.4.13"
+  },
+  "dependencies": {
+    "electron": "^2.0.6",
+    "electron-download-manager": "^2.2.0",
+    "https": "^1.0.0",
+    "jquery": "^3.3.1",
+    "materialize-css": "^1.0.0-rc.2",
+    "path": "^0.12.7",
+    "url": "^0.11.0"
+  }
+}
